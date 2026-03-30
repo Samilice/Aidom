@@ -1,0 +1,18 @@
+name = "aidom"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+main = "server/index.ts"
+
+# Cloudflare Pages avec Functions
+# Le worker sert l'API, Pages sert le frontend statique
+
+[vars]
+JWT_SECRET = "change-me-in-production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aidom-db"
+database_id = "f3480db6-97c3-473b-805b-de7e02b03adf"
+
+[site]
+bucket = "./dist"

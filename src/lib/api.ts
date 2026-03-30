@@ -34,7 +34,7 @@ async function request<T>(
     return { success: true, data: html as unknown as T };
   }
 
-  const json = await res.json();
+  const json = await res.json() as { success: boolean; data?: T; error?: string };
   return json;
 }
 

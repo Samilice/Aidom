@@ -1,8 +1,10 @@
-import { serve } from '@hono/node-server';
+// ============================================
+// AIDOM — Cloudflare Worker Entry Point
+// ============================================
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
-import { initDb } from './db/index.js';
+import type { Env } from './middleware/auth.js';
 import auth from './routes/auth.js';
 import employer from './routes/employer.js';
 import employees from './routes/employees.js';
@@ -12,30 +14,26 @@ import remindersRoute from './routes/reminders.js';
 import checklist from './routes/checklist.js';
 import stripe from './routes/stripe.js';
 
-async function main() {
-  await initDb();
+const api = new Hono<Env>();
 
-  const app = new Hono();
+api.use('*', cors());
 
-  app.use('*', cors({ origin: 'http://localhost:5173', credentials: true }));
-  app.use('*', logger());
+api.route('/api/auth', auth);
+api.route('/api/employer', employer);
+api.route('/api/employees', employees);
+api.route('/api/simulate', simulation);
+api.route('/api/documents', documents);
+api.route('/api/reminders', remindersRoute);
+api.route('/api/checklist', checklist);
+api.route('/api/stripe', stripe);
 
-  app.route('/api/auth', auth);
-  app.route('/api/employer', employer);
-  app.route('/api/employees', employees);
-  app.route('/api/simulate', simulation);
-  app.route('/api/documents', documents);
-  app.route('/api/reminders', remindersRoute);
-  app.route('/api/checklist', checklist);
-  app.route('/api/stripe', stripe);
+api.get('/api/health', (c) => c.json({ status: 'ok', name: 'Aidom API' }));
 
-  app.get('/api/health', (c) => c.json({ status: 'ok', name: 'Aidom API' }));
+// Serve static assets (Cloudflare Workers Sites)
+api.get('*', (c) => {
+  // In production, static assets are served by Cloudflare Pages
+  // This fallback returns index.html for SPA routing
+  return c.html('<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta http-equiv="refresh" content="0;url=/" /></head><body></body></html>');
+});
 
-  const port = Number(process.env.PORT) || 3001;
-
-  serve({ fetch: app.fetch, port }, () => {
-    console.log(`\n  Aidom API running on http://localhost:${port}\n`);
-  });
-}
-
-main().catch(console.error);
+export default api;

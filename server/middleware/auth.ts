@@ -1,29 +1,39 @@
-import type { Context, Next } from 'hono';
-import jwt from 'jsonwebtoken';
+// ============================================
+// AIDOM — JWT Auth (jose — Web Crypto compatible)
+// ============================================
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+import { Context, Next } from 'hono';
+import { SignJWT, jwtVerify } from 'jose';
 
 export interface JwtPayload {
   userId: string;
   email: string;
 }
 
-export type AppEnv = {
-  Variables: {
-    userId: string;
-    email: string;
+export type Env = {
+  Bindings: {
+    DB: D1Database;
+    JWT_SECRET: string;
   };
 };
 
-export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+function getSecret(secretStr: string) {
+  return new TextEncoder().encode(secretStr);
 }
 
-export function verifyToken(token: string): JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as JwtPayload;
+export async function signToken(payload: JwtPayload, secret: string): Promise<string> {
+  return new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime('7d')
+    .sign(getSecret(secret));
 }
 
-export async function authMiddleware(c: Context, next: Next) {
+export async function verifyToken(token: string, secret: string): Promise<JwtPayload> {
+  const { payload } = await jwtVerify(token, getSecret(secret));
+  return { userId: payload.userId as string, email: payload.email as string };
+}
+
+export async function authMiddleware(c: Context<any>, next: Next) {
   const header = c.req.header('Authorization');
   if (!header?.startsWith('Bearer ')) {
     return c.json({ success: false, error: 'Non autorisé' }, 401);
@@ -31,7 +41,8 @@ export async function authMiddleware(c: Context, next: Next) {
 
   try {
     const token = header.slice(7);
-    const payload = verifyToken(token);
+    const secret = c.env.JWT_SECRET || 'dev-secret-change-me';
+    const payload = await verifyToken(token, secret);
     c.set('userId' as any, payload.userId);
     c.set('email' as any, payload.email);
     await next();

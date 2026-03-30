@@ -1,0 +1,277 @@
+// ============================================
+// AIDOM — Système i18n simple
+// ============================================
+
+import React, { createContext, useContext, useState, useCallback } from 'react';
+
+export type Lang = 'fr' | 'de' | 'en' | 'it' | 'es';
+
+export const LANGUAGES: { code: Lang; label: string; flag: string }[] = [
+  { code: 'fr', label: 'Français', flag: 'FR' },
+  { code: 'de', label: 'Deutsch', flag: 'DE' },
+  { code: 'en', label: 'English', flag: 'EN' },
+  { code: 'it', label: 'Italiano', flag: 'IT' },
+  { code: 'es', label: 'Español', flag: 'ES' },
+];
+
+// Translations — key strings
+const translations: Record<Lang, Record<string, string>> = {
+  fr: {
+    'nav.simulator': 'Calculateur',
+    'nav.pricing': 'Tarifs',
+    'nav.howItWorks': 'Comment ça marche',
+    'nav.guides': 'Guides',
+    'nav.login': 'Connexion',
+    'nav.signup': 'Commencer gratuitement',
+    'nav.dashboard': 'Tableau de bord',
+    'nav.logout': 'Déconnexion',
+    'hero.badge': 'En ligne — Les 26 cantons',
+    'hero.title1': 'Déclarez votre aide ménagère',
+    'hero.title2': 'légalement en 5 minutes',
+    'hero.subtitle': 'Contrat, fiches de paie, AVS — Aidom gère la paperasse pour vous, pas à pas. Vous restez l\'employeur, nous simplifions tout.',
+    'hero.price': 'CHF 19.—/mois. Prix fixe.',
+    'hero.cta1': 'Commencer gratuitement',
+    'hero.cta2': 'Calculer les coûts',
+    'hero.trust1': 'Qualité suisse',
+    'hero.trust2': 'Taux AVS 2025',
+    'hero.trust3': '30 jours gratuits',
+    'hero.trial': '30 jours gratuits · Résiliable à tout moment',
+    'section.cantons': 'Valable dans votre canton',
+    'section.cantons.desc': 'Aidom couvre les 26 cantons suisses avec les taux corrects de chaque caisse de compensation.',
+    'section.howItWorks': 'Comment ça marche',
+    'section.howItWorks.desc': 'En quatre étapes, tout est en ordre.',
+    'section.cost': 'Combien ça coûte vraiment ?',
+    'section.cost.desc': 'Calculez le coût réel de votre employé(e) de maison, charges comprises.',
+    'section.pricing': 'Un prix. Pas de surprises.',
+    'section.pricing.desc': 'Tout est inclus. Aucun frais caché. Aucun pourcentage.',
+    'section.faq': 'Questions fréquentes',
+    'section.guides': 'Guides & Ressources',
+    'section.guides.desc': 'Tout ce qu\'il faut savoir pour employer correctement votre aide à domicile.',
+    'section.risk': 'Travail au noir : les risques',
+    'section.features': 'Tout ce dont vous avez besoin',
+    'section.features.desc': 'Simple, complet, conforme au droit suisse.',
+    'pricing.month': '/mois',
+    'pricing.includes': 'Tout inclus',
+    'pricing.cta': 'Commencer — 30 jours gratuits',
+    'footer.product': 'Produit',
+    'footer.knowledge': 'Savoir',
+    'footer.legal': 'Juridique',
+    'footer.contact': 'Contact',
+    'footer.tagline': 'L\'emploi à domicile, simplifié.',
+    'footer.developed': 'Développé en Suisse',
+  },
+  de: {
+    'nav.simulator': 'Rechner',
+    'nav.pricing': 'Preise',
+    'nav.howItWorks': 'So funktioniert\'s',
+    'nav.guides': 'Ratgeber',
+    'nav.login': 'Anmelden',
+    'nav.signup': 'Kostenlos starten',
+    'nav.dashboard': 'Dashboard',
+    'nav.logout': 'Abmelden',
+    'hero.badge': 'Online — Alle 26 Kantone',
+    'hero.title1': 'Melden Sie Ihre Haushaltshilfe',
+    'hero.title2': 'legal in 5 Minuten an',
+    'hero.subtitle': 'Vertrag, Lohnabrechnungen, AHV — Aidom erledigt den Papierkram für Sie, Schritt für Schritt.',
+    'hero.price': 'CHF 19.—/Monat. Festpreis.',
+    'hero.cta1': 'Kostenlos starten',
+    'hero.cta2': 'Kosten berechnen',
+    'hero.trust1': 'Schweizer Qualität',
+    'hero.trust2': 'AHV-Sätze 2025',
+    'hero.trust3': '30 Tage gratis',
+    'hero.trial': '30 Tage gratis · Jederzeit kündbar',
+    'section.cantons': 'Gültig in Ihrem Kanton',
+    'section.cantons.desc': 'Aidom deckt alle 26 Schweizer Kantone mit den korrekten Beitragssätzen ab.',
+    'section.howItWorks': 'So funktioniert\'s',
+    'section.howItWorks.desc': 'In vier Schritten ist alles erledigt.',
+    'section.cost': 'Was kostet es wirklich?',
+    'section.cost.desc': 'Berechnen Sie die tatsächlichen Kosten Ihrer Haushaltshilfe.',
+    'section.pricing': 'Ein Preis. Keine Überraschungen.',
+    'section.pricing.desc': 'Alles inklusive. Keine versteckten Gebühren.',
+    'section.faq': 'Häufige Fragen',
+    'section.guides': 'Ratgeber & Ressourcen',
+    'section.guides.desc': 'Alles, was Sie wissen müssen, um Ihre Haushaltshilfe korrekt anzumelden.',
+    'section.risk': 'Schwarzarbeit: die Risiken',
+    'section.features': 'Alles was Sie brauchen',
+    'section.features.desc': 'Einfach, vollständig, rechtskonform.',
+    'pricing.month': '/Monat',
+    'pricing.includes': 'Alles inklusive',
+    'pricing.cta': 'Starten — 30 Tage gratis',
+    'footer.product': 'Produkt',
+    'footer.knowledge': 'Wissen',
+    'footer.legal': 'Rechtliches',
+    'footer.contact': 'Kontakt',
+    'footer.tagline': 'Haushaltsanstellung, vereinfacht.',
+    'footer.developed': 'Entwickelt in der Schweiz',
+  },
+  en: {
+    'nav.simulator': 'Calculator',
+    'nav.pricing': 'Pricing',
+    'nav.howItWorks': 'How it works',
+    'nav.guides': 'Guides',
+    'nav.login': 'Log in',
+    'nav.signup': 'Start free',
+    'nav.dashboard': 'Dashboard',
+    'nav.logout': 'Log out',
+    'hero.badge': 'Online — All 26 cantons',
+    'hero.title1': 'Register your household help',
+    'hero.title2': 'legally in 5 minutes',
+    'hero.subtitle': 'Contract, payslips, social insurance — Aidom handles the paperwork for you, step by step.',
+    'hero.price': 'CHF 19.—/month. Flat fee.',
+    'hero.cta1': 'Start free',
+    'hero.cta2': 'Calculate costs',
+    'hero.trust1': 'Swiss quality',
+    'hero.trust2': 'AVS rates 2025',
+    'hero.trust3': '30 days free',
+    'hero.trial': '30 days free · Cancel anytime',
+    'section.cantons': 'Valid in your canton',
+    'section.cantons.desc': 'Aidom covers all 26 Swiss cantons with the correct contribution rates.',
+    'section.howItWorks': 'How it works',
+    'section.howItWorks.desc': 'In four steps, everything is sorted.',
+    'section.cost': 'What does it really cost?',
+    'section.cost.desc': 'Calculate the true cost of your household employee, charges included.',
+    'section.pricing': 'One price. No surprises.',
+    'section.pricing.desc': 'Everything included. No hidden fees. No percentages.',
+    'section.faq': 'Frequently asked questions',
+    'section.guides': 'Guides & Resources',
+    'section.guides.desc': 'Everything you need to know to properly employ your household help.',
+    'section.risk': 'Undeclared work: the risks',
+    'section.features': 'Everything you need',
+    'section.features.desc': 'Simple, complete, compliant with Swiss law.',
+    'pricing.month': '/month',
+    'pricing.includes': 'All included',
+    'pricing.cta': 'Start — 30 days free',
+    'footer.product': 'Product',
+    'footer.knowledge': 'Knowledge',
+    'footer.legal': 'Legal',
+    'footer.contact': 'Contact',
+    'footer.tagline': 'Home employment, simplified.',
+    'footer.developed': 'Developed in Switzerland',
+  },
+  it: {
+    'nav.simulator': 'Calcolatore',
+    'nav.pricing': 'Prezzi',
+    'nav.howItWorks': 'Come funziona',
+    'nav.guides': 'Guide',
+    'nav.login': 'Accedi',
+    'nav.signup': 'Inizia gratis',
+    'nav.dashboard': 'Pannello',
+    'nav.logout': 'Esci',
+    'hero.badge': 'Online — Tutti i 26 cantoni',
+    'hero.title1': 'Registra la tua collaboratrice domestica',
+    'hero.title2': 'legalmente in 5 minuti',
+    'hero.subtitle': 'Contratto, buste paga, AVS — Aidom gestisce la burocrazia per voi, passo dopo passo.',
+    'hero.price': 'CHF 19.—/mese. Prezzo fisso.',
+    'hero.cta1': 'Inizia gratis',
+    'hero.cta2': 'Calcola i costi',
+    'hero.trust1': 'Qualità svizzera',
+    'hero.trust2': 'Aliquote AVS 2025',
+    'hero.trust3': '30 giorni gratis',
+    'hero.trial': '30 giorni gratis · Disdetta in qualsiasi momento',
+    'section.cantons': 'Valido nel tuo cantone',
+    'section.cantons.desc': 'Aidom copre tutti i 26 cantoni svizzeri con le aliquote corrette.',
+    'section.howItWorks': 'Come funziona',
+    'section.howItWorks.desc': 'In quattro passi, tutto è in ordine.',
+    'section.cost': 'Quanto costa davvero?',
+    'section.cost.desc': 'Calcola il costo reale della tua collaboratrice domestica.',
+    'section.pricing': 'Un prezzo. Nessuna sorpresa.',
+    'section.pricing.desc': 'Tutto incluso. Nessun costo nascosto.',
+    'section.faq': 'Domande frequenti',
+    'section.guides': 'Guide e Risorse',
+    'section.guides.desc': 'Tutto ciò che serve per impiegare correttamente la collaboratrice domestica.',
+    'section.risk': 'Lavoro nero: i rischi',
+    'section.features': 'Tutto ciò di cui hai bisogno',
+    'section.features.desc': 'Semplice, completo, conforme al diritto svizzero.',
+    'pricing.month': '/mese',
+    'pricing.includes': 'Tutto incluso',
+    'pricing.cta': 'Inizia — 30 giorni gratis',
+    'footer.product': 'Prodotto',
+    'footer.knowledge': 'Sapere',
+    'footer.legal': 'Legale',
+    'footer.contact': 'Contatto',
+    'footer.tagline': 'Lavoro domestico, semplificato.',
+    'footer.developed': 'Sviluppato in Svizzera',
+  },
+  es: {
+    'nav.simulator': 'Calculadora',
+    'nav.pricing': 'Precios',
+    'nav.howItWorks': 'Cómo funciona',
+    'nav.guides': 'Guías',
+    'nav.login': 'Iniciar sesión',
+    'nav.signup': 'Empezar gratis',
+    'nav.dashboard': 'Panel',
+    'nav.logout': 'Cerrar sesión',
+    'hero.badge': 'Online — Los 26 cantones',
+    'hero.title1': 'Declara a tu empleada del hogar',
+    'hero.title2': 'legalmente en 5 minutos',
+    'hero.subtitle': 'Contrato, nóminas, AVS — Aidom gestiona el papeleo por ti, paso a paso.',
+    'hero.price': 'CHF 19.—/mes. Precio fijo.',
+    'hero.cta1': 'Empezar gratis',
+    'hero.cta2': 'Calcular costes',
+    'hero.trust1': 'Calidad suiza',
+    'hero.trust2': 'Tasas AVS 2025',
+    'hero.trust3': '30 días gratis',
+    'hero.trial': '30 días gratis · Cancelable en cualquier momento',
+    'section.cantons': 'Válido en tu cantón',
+    'section.cantons.desc': 'Aidom cubre los 26 cantones suizos con las tasas correctas.',
+    'section.howItWorks': 'Cómo funciona',
+    'section.howItWorks.desc': 'En cuatro pasos, todo está en orden.',
+    'section.cost': '¿Cuánto cuesta realmente?',
+    'section.cost.desc': 'Calcula el coste real de tu empleada del hogar, cargas incluidas.',
+    'section.pricing': 'Un precio. Sin sorpresas.',
+    'section.pricing.desc': 'Todo incluido. Sin costes ocultos.',
+    'section.faq': 'Preguntas frecuentes',
+    'section.guides': 'Guías y Recursos',
+    'section.guides.desc': 'Todo lo que necesitas saber para emplear correctamente a tu ayuda doméstica.',
+    'section.risk': 'Trabajo no declarado: los riesgos',
+    'section.features': 'Todo lo que necesitas',
+    'section.features.desc': 'Simple, completo, conforme al derecho suizo.',
+    'pricing.month': '/mes',
+    'pricing.includes': 'Todo incluido',
+    'pricing.cta': 'Empezar — 30 días gratis',
+    'footer.product': 'Producto',
+    'footer.knowledge': 'Saber',
+    'footer.legal': 'Legal',
+    'footer.contact': 'Contacto',
+    'footer.tagline': 'Empleo doméstico, simplificado.',
+    'footer.developed': 'Desarrollado en Suiza',
+  },
+};
+
+interface I18nContext {
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+  t: (key: string) => string;
+}
+
+const I18nCtx = createContext<I18nContext>({
+  lang: 'fr',
+  setLang: () => {},
+  t: (key) => key,
+});
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(() => {
+    const saved = localStorage.getItem('aidom_lang') as Lang;
+    return saved && translations[saved] ? saved : 'fr';
+  });
+
+  const setLang = useCallback((l: Lang) => {
+    setLangState(l);
+    localStorage.setItem('aidom_lang', l);
+  }, []);
+
+  const t = useCallback((key: string) => {
+    return translations[lang]?.[key] || translations.fr[key] || key;
+  }, [lang]);
+
+  return (
+    <I18nCtx.Provider value={{ lang, setLang, t }}>
+      {children}
+    </I18nCtx.Provider>
+  );
+}
+
+export function useI18n() {
+  return useContext(I18nCtx);
+}

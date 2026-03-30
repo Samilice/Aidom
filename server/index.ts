@@ -4,6 +4,9 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
+// @ts-ignore - generated at build time by wrangler
+import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 import type { Env } from './middleware/auth.js';
 import auth from './routes/auth.js';
 import employer from './routes/employer.js';
@@ -14,26 +17,55 @@ import remindersRoute from './routes/reminders.js';
 import checklist from './routes/checklist.js';
 import stripe from './routes/stripe.js';
 
-const api = new Hono<Env>();
+const assetManifest = JSON.parse(manifestJSON);
 
-api.use('*', cors());
+const app = new Hono<Env>();
 
-api.route('/api/auth', auth);
-api.route('/api/employer', employer);
-api.route('/api/employees', employees);
-api.route('/api/simulate', simulation);
-api.route('/api/documents', documents);
-api.route('/api/reminders', remindersRoute);
-api.route('/api/checklist', checklist);
-api.route('/api/stripe', stripe);
+app.use('*', cors());
 
-api.get('/api/health', (c) => c.json({ status: 'ok', name: 'Aidom API' }));
+// API routes
+app.route('/api/auth', auth);
+app.route('/api/employer', employer);
+app.route('/api/employees', employees);
+app.route('/api/simulate', simulation);
+app.route('/api/documents', documents);
+app.route('/api/reminders', remindersRoute);
+app.route('/api/checklist', checklist);
+app.route('/api/stripe', stripe);
+app.get('/api/health', (c) => c.json({ status: 'ok', name: 'Aidom API' }));
 
-// Serve static assets (Cloudflare Workers Sites)
-api.get('*', (c) => {
-  // In production, static assets are served by Cloudflare Pages
-  // This fallback returns index.html for SPA routing
-  return c.html('<!DOCTYPE html><html><head><meta charset="UTF-8" /><meta http-equiv="refresh" content="0;url=/" /></head><body></body></html>');
-});
+export default {
+  async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
 
-export default api;
+    // API routes → Hono
+    if (url.pathname.startsWith('/api')) {
+      return app.fetch(request, env, ctx);
+    }
+
+    // Static assets
+    try {
+      return await getAssetFromKV(
+        { request, waitUntil: ctx.waitUntil.bind(ctx) } as any,
+        {
+          ASSET_NAMESPACE: env.__STATIC_CONTENT,
+          ASSET_MANIFEST: assetManifest,
+        }
+      );
+    } catch {
+      // SPA fallback → index.html
+      try {
+        const notFoundReq = new Request(new URL('/index.html', request.url).toString(), request);
+        return await getAssetFromKV(
+          { request: notFoundReq, waitUntil: ctx.waitUntil.bind(ctx) } as any,
+          {
+            ASSET_NAMESPACE: env.__STATIC_CONTENT,
+            ASSET_MANIFEST: assetManifest,
+          }
+        );
+      } catch {
+        return new Response('Not found', { status: 404 });
+      }
+    }
+  },
+};
